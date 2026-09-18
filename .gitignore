@@ -1,0 +1,8 @@
+backend/
+frontend/
+.venv/
+node_modules/
+.env
+class-urls.txt
+__pycache__/
+.pytest_cache/
