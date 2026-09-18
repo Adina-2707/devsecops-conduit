@@ -1,8 +1,10 @@
-backend/
-frontend/
 .venv/
 node_modules/
 .env
+*.env
+!.env.example
+logs/
 class-urls.txt
 __pycache__/
 .pytest_cache/
+.playwright/

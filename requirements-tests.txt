@@ -1,0 +1,4 @@
+pytest
+httpx
+pytest-playwright
+python-slugify
