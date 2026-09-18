@@ -90,3 +90,22 @@ Stop all class processes and the course database with:
 ```bash
 ./scripts/stop-class.sh
 ```
+
+## VS Code
+
+Open the repository root in VS Code, install the recommended Python extensions,
+then open **Run and Debug** and select **Conduit: Full stack**. Press `F5`.
+VS Code creates the backend virtual environment when missing, installs backend
+and frontend dependencies, starts PostgreSQL, applies migrations, then launches
+FastAPI under the Python debugger on port 8000 and the frontend development
+server on port 3000. Stopping the compound debug session also stops the course
+database.
+
+The configuration is split as VS Code expects:
+
+- `.vscode/settings.json` configures Python, pytest and source discovery;
+- `.vscode/tasks.json` prepares PostgreSQL, dependencies and migrations;
+- `.vscode/launch.json` starts backend and frontend together.
+
+Local settings are copied from `backend/.env.example` only when `backend/.env`
+does not already exist. The real `.env` remains ignored by Git.

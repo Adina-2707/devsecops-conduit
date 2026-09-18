@@ -1,0 +1,93 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Conduit: configure backend",
+      "type": "shell",
+      "command": "test -f .env || cp .env.example .env",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: create backend venv",
+      "type": "shell",
+      "command": "test -x .venv/bin/python || python3 -m venv .venv",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: install backend",
+      "type": "shell",
+      "command": "if [[ ! -f .venv/.requirements-installed || requirements.txt -nt .venv/.requirements-installed ]]; then .venv/bin/python -m pip install -q -r requirements.txt && touch .venv/.requirements-installed; fi",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "dependsOn": "Conduit: create backend venv",
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: start database",
+      "type": "process",
+      "command": "docker",
+      "args": [
+        "compose",
+        "--project-directory",
+        "${workspaceFolder}/backend",
+        "-p",
+        "conduit",
+        "up",
+        "-d",
+        "--wait",
+        "postgres"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: migrate backend",
+      "type": "shell",
+      "command": "set -a; source .env; set +a; .venv/bin/alembic upgrade head",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: prepare backend",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Conduit: configure backend",
+        "Conduit: install backend",
+        "Conduit: start database",
+        "Conduit: migrate backend"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: install frontend",
+      "type": "shell",
+      "command": "if [[ ! -f node_modules/.package-installed || package.json -nt node_modules/.package-installed || pnpm-lock.yaml -nt node_modules/.package-installed ]]; then npm install --no-package-lock && touch node_modules/.package-installed; fi",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Conduit: stop database",
+      "type": "process",
+      "command": "docker",
+      "args": [
+        "compose",
+        "--project-directory",
+        "${workspaceFolder}/backend",
+        "-p",
+        "conduit",
+        "down"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

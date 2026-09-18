@@ -1,0 +1,58 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Conduit: Backend",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": [
+        "conduit.app:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "preLaunchTask": "Conduit: prepare backend",
+      "postDebugTask": "Conduit: stop database"
+    },
+    {
+      "name": "Conduit: Frontend",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/frontend/server.js",
+      "cwd": "${workspaceFolder}/frontend",
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3000",
+        "REACT_PUBLIC_API_ENDPOINT": "http://127.0.0.1:8000/api",
+        "SESSION_SECRET": "local-vscode-session-only"
+      },
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "preLaunchTask": "Conduit: install frontend",
+      "serverReadyAction": {
+        "pattern": "Server is running on (http://localhost:3000)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Conduit: Full stack",
+      "configurations": [
+        "Conduit: Backend",
+        "Conduit: Frontend"
+      ],
+      "stopAll": true
+    }
+  ]
+}
