@@ -89,7 +89,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           rel="stylesheet"
           type="text/css"
         />
-        <link rel="stylesheet" href="//demo.productionready.io/main.css" />
         <Meta />
         <Links />
       </head>

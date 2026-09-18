@@ -7,6 +7,9 @@ FRONTEND="$ROOT/frontend"
 LOGS="$ROOT/logs"
 LOCAL_ONLY=false
 
+# shellcheck disable=SC1091
+source "$ROOT/scripts/lib/http.sh"
+
 if [[ "${1:-}" == "--local-only" ]]; then
   LOCAL_ONLY=true
 elif [[ -n "${1:-}" ]]; then
@@ -58,13 +61,7 @@ nohup "$BACKEND/.venv/bin/uvicorn" conduit.app:app \
   >"$LOGS/backend.log" 2>&1 &
 echo $! > "$LOGS/backend.pid"
 
-for _ in {1..30}; do
-  if curl -fsS http://127.0.0.1:8000/api/tags >/dev/null; then
-    break
-  fi
-  sleep 1
-done
-curl -fsS http://127.0.0.1:8000/api/tags >/dev/null
+wait_for_http "http://127.0.0.1:8000/api/tags" "Backend"
 
 export REACT_PUBLIC_API_ENDPOINT="http://127.0.0.1:8000/api"
 export SESSION_SECRET="$(openssl rand -hex 32)"
@@ -74,13 +71,7 @@ nohup env PORT=3000 REACT_PUBLIC_API_ENDPOINT="$REACT_PUBLIC_API_ENDPOINT" \
   >"$LOGS/frontend.log" 2>&1 &
 echo $! > "$LOGS/frontend.pid"
 
-for _ in {1..30}; do
-  if curl -fsS http://127.0.0.1:3000 >/dev/null; then
-    break
-  fi
-  sleep 1
-done
-curl -fsS http://127.0.0.1:3000 >/dev/null
+wait_for_http "http://127.0.0.1:3000" "Frontend"
 
 if [[ "$LOCAL_ONLY" == true ]]; then
   printf 'API_URL=http://127.0.0.1:8000\nWEB_URL=http://127.0.0.1:3000\n' > "$ROOT/class-urls.txt"
