@@ -13,8 +13,11 @@ stable version all year.
 ## Student setup
 
 Download this repository with **Code → Download ZIP**, unzip it, and open a
-terminal in the folder. You need Python 3.12 or newer; Docker and Node are not
-needed on student laptops.
+terminal in the folder. The tests need Python 3.12 or newer. To run the
+application on your own laptop you also need Docker and Node.js 22; without
+them you can still test the instructor's copy.
+
+### 1. Install the test tools
 
 macOS or Linux:
 
@@ -34,14 +37,37 @@ python -m pip install -r requirements-tests.txt
 playwright install chromium
 ```
 
-The instructor writes `API_URL` and `WEB_URL` on the board. Set them in the
-same terminal before running the tests:
+### 2. Run the application
+
+Create the local settings and start PostgreSQL. The settings file lives in
+`backend/`, and the project name `conduit` must match the one the scripts and
+VS Code use:
 
 ```bash
-export API_URL="https://api-address-from-the-board"
-export WEB_URL="https://web-address-from-the-board"
+cd backend
+cp .env.example .env
+docker compose -p conduit up -d --wait postgres
+cd ..
 ```
 
+Then start the backend and the frontend: press `F5` in VS Code with
+**Conduit: Full stack** selected (see [VS Code](#vs-code)), or run
+`./scripts/run-class.sh --local-only`. The backend answers on
+http://127.0.0.1:8000 and the frontend on http://127.0.0.1:3000. The scripts
+and VS Code tasks are written for macOS and Linux; on Windows run them inside
+WSL.
+
+### 3. Point the tests at the application
+
+For the copy on your own laptop:
+
+```bash
+export API_URL="http://127.0.0.1:8000"
+export WEB_URL="http://127.0.0.1:3000"
+```
+
+These are also the defaults, so locally you can skip this step. To test the
+instructor's copy instead, use the two addresses written on the board.
 PowerShell uses `$env:API_URL="..."` and `$env:WEB_URL="..."`.
 
 ## The three test levels
