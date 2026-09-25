@@ -1,4 +1,3 @@
-import code
 from secrets import token_urlsafe
 
 from slugify import slugify
