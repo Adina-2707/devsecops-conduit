@@ -1,0 +1,8 @@
+# Lesson texts show a fake key on purpose, so they are not scanned.
+# Everything else, including your own code, still is.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Course lesson texts"
+paths = ['''^lessons/''', '''^README\.md$''']
