@@ -1,3 +1,4 @@
+import code
 from secrets import token_urlsafe
 
 from slugify import slugify
@@ -25,6 +26,8 @@ def make_slug_from_title_and_code(title: str, code: str) -> str:
         "hello-world-123456"
     """
     slug = slugify(text=title, max_length=32, lowercase=True)
+    if not slug:
+        return code
     return f"{slug}-{code}"
 
 

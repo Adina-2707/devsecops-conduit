@@ -23,3 +23,8 @@ def test_long_title_is_cut_before_the_code():
 
 def test_unique_part_is_the_last_segment():
     assert get_slug_unique_part("hello-world-123456") == "123456"
+
+
+
+def test_title_without_letters_does_not_start_with_a_dash():
+    assert make_slug_from_title_and_code("!!!!!", "abc123") == "abc123"
