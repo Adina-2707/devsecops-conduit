@@ -14,7 +14,24 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements-tests.txt
+      - run: python -m pytest tests/unit -vname: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-tests.txt
       - run: python -m pytest tests/unit -v
+<<<<<<< HEAD
 
   secret-scan:
     runs-on: ubuntu-latest
@@ -23,3 +40,5 @@ jobs:
         with:
           fetch-depth: 0
       - run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --log-opts=HEAD --no-banner -v
+=======
+>>>>>>> 6335b0e (Run unit tests in CI)
