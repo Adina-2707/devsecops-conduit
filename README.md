@@ -14,6 +14,7 @@ stable version all year. Slides and reading: <https://devsecops-fieldbook.vercel
 | 03 | [Your own server: the first deploy, by hand](lessons/03.md) |
 | 04 | [The complete application: frontend, a web server, a domain name and HTTPS](lessons/04.md) |
 | 05 | [Automation: from typed commands to a script, then to Ansible](lessons/05.md) |
+| 06 | [Continuous delivery: a robot releases every green commit](lessons/06.md) |
 
 ## Sources
 
