@@ -1,0 +1,15 @@
+[Unit]
+Description=Conduit API
+After=network.target postgresql.service
+
+[Service]
+User=conduit
+WorkingDirectory=/opt/conduit/src/backend
+EnvironmentFile=/etc/conduit/conduit.env
+Environment=APP_REVISION={{ code.after }}
+ExecStartPre=/opt/conduit/venv/bin/python -m alembic -c alembic.ini upgrade head
+ExecStart=/opt/conduit/venv/bin/uvicorn conduit.app:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,191 @@
+- name: Set up the Conduit server and release one commit
+  hosts: conduit
+  become: true
+  vars:
+    revision: main
+
+  tasks:
+    # ---- what Lesson 3, Mission 2 installed by hand ----
+    - name: Install the system packages
+      ansible.builtin.apt:
+        name: [git, acl, python3-venv, python3-packaging, python3-psycopg2, postgresql, caddy]
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Download the Node.js installer
+      ansible.builtin.get_url:
+        url: https://deb.nodesource.com/setup_22.x
+        dest: /root/nodesource_setup.sh
+        mode: "0700"
+
+    - name: Add the Node.js package source
+      ansible.builtin.command: bash /root/nodesource_setup.sh
+      args:
+        creates: /etc/apt/sources.list.d/nodesource.sources
+
+    - name: Install Node.js
+      ansible.builtin.apt:
+        name: nodejs
+
+    # ---- Lesson 3, Mission 3: a small user and locked secrets ----
+    - name: Create a user that can only run the application
+      ansible.builtin.user:
+        name: conduit
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Create the folder for the secrets
+      ansible.builtin.file:
+        path: /etc/conduit
+        state: directory
+        mode: "0700"
+
+    - name: Create the API secrets once and never overwrite them
+      ansible.builtin.copy:
+        dest: /etc/conduit/conduit.env
+        force: false
+        mode: "0600"
+        content: |
+          APP_ENV=prod
+          SECRET_KEY={{ lookup('ansible.builtin.password', '/dev/null', length=48, chars=['ascii_letters', 'digits']) }}
+          JWT_SECRET_KEY={{ lookup('ansible.builtin.password', '/dev/null', length=48, chars=['ascii_letters', 'digits']) }}
+          POSTGRES_HOST=127.0.0.1
+          POSTGRES_PORT=5432
+          POSTGRES_DB=conduit
+          POSTGRES_USER=conduit
+          POSTGRES_PASSWORD={{ lookup('ansible.builtin.password', '/dev/null', length=32, chars=['ascii_letters', 'digits']) }}
+      no_log: true
+
+    - name: Create the frontend secrets once and never overwrite them
+      ansible.builtin.copy:
+        dest: /etc/conduit/web.env
+        force: false
+        mode: "0600"
+        content: |
+          PORT=3000
+          REACT_PUBLIC_API_ENDPOINT=http://127.0.0.1:8000/api
+          SESSION_SECRET={{ lookup('ansible.builtin.password', '/dev/null', length=48, chars=['ascii_letters', 'digits']) }}
+      no_log: true
+
+    - name: Read the database password back from the server
+      ansible.builtin.slurp:
+        src: /etc/conduit/conduit.env
+      register: secrets
+      no_log: true
+
+    - name: Create the database user
+      community.postgresql.postgresql_user:
+        name: conduit
+        password: "{{ secrets.content | b64decode | regex_search('POSTGRES_PASSWORD=(.+)', '\\1') | first }}"
+      become_user: postgres
+      no_log: true
+
+    - name: Create the database
+      community.postgresql.postgresql_db:
+        name: conduit
+        owner: conduit
+      become_user: postgres
+
+    # ---- the release: code, libraries, build ----
+    - name: Get the code of one exact commit
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: /opt/conduit/src
+        version: "{{ revision }}"
+        force: true
+      register: code
+      notify:
+        - Restart the API
+        - Restart the frontend
+
+    - name: Install the Python libraries
+      ansible.builtin.pip:
+        requirements: /opt/conduit/src/backend/requirements.txt
+        virtualenv: /opt/conduit/venv
+        virtualenv_command: python3 -m venv
+      notify: Restart the API
+
+    - name: Install the frontend libraries
+      ansible.builtin.command: npm install --no-package-lock
+      args:
+        chdir: /opt/conduit/src/frontend
+      when: code.changed
+
+    - name: Build the frontend
+      ansible.builtin.command: npm run build
+      args:
+        chdir: /opt/conduit/src/frontend
+      when: code.changed
+
+    # ---- the services and the web server ----
+    - name: Install the API service
+      ansible.builtin.template:
+        src: conduit.service.j2
+        dest: /etc/systemd/system/conduit.service
+        mode: "0644"
+      notify: Restart the API
+
+    - name: Install the frontend service
+      ansible.builtin.template:
+        src: conduit-web.service.j2
+        dest: /etc/systemd/system/conduit-web.service
+        mode: "0644"
+      notify: Restart the frontend
+
+    - name: Configure the web server
+      ansible.builtin.template:
+        src: Caddyfile.j2
+        dest: /etc/caddy/Caddyfile
+        mode: "0644"
+      notify: Reload the web server
+
+    - name: Start everything now and after every reboot
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+        daemon_reload: true
+      loop: [conduit, conduit-web, caddy]
+
+    - name: Apply restarts now if anything changed
+      ansible.builtin.meta: flush_handlers
+
+    # ---- the check ----
+    - name: Check that the API answers
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8000/api/health-check
+      register: health
+      retries: 30
+      delay: 1
+      until: health.status == 200
+
+    - name: Check that the frontend answers
+      ansible.builtin.uri:
+        url: http://127.0.0.1:3000/
+      register: page
+      retries: 30
+      delay: 1
+      until: page.status == 200
+
+    - name: Show the running version
+      ansible.builtin.debug:
+        msg: "{{ health.json }}"
+
+  handlers:
+    - name: Restart the API
+      ansible.builtin.systemd_service:
+        name: conduit
+        state: restarted
+        daemon_reload: true
+
+    - name: Restart the frontend
+      ansible.builtin.systemd_service:
+        name: conduit-web
+        state: restarted
+        daemon_reload: true
+
+    - name: Reload the web server
+      ansible.builtin.systemd_service:
+        name: caddy
+        state: reloaded

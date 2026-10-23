@@ -1,0 +1,13 @@
+[Unit]
+Description=Conduit frontend
+After=network.target conduit.service
+
+[Service]
+User=conduit
+WorkingDirectory=/opt/conduit/src/frontend
+EnvironmentFile=/etc/conduit/web.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
