@@ -28,3 +28,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: detect --source . --redact --verbose
+
+  deploy:
+    needs: [unit-tests, gitleaks]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Ansible
+        run: |
+          pip install ansible-core
+          ansible-galaxy collection install community.postgresql
+      - name: Give the robot its key
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Release this commit
+        run: ansible-playbook -i deploy/inventory.ini deploy/playbook.yml --private-key ~/.ssh/deploy_key -e revision="$GITHUB_SHA"
