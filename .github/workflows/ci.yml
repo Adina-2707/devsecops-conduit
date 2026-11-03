@@ -29,9 +29,41 @@ jobs:
         with:
           args: detect --source . --redact --verbose
 
-  deploy:
+  build-images:
     needs: [unit-tests, gitleaks]
     if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Name the images
+        run: echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - name: Log in to the registry
+        run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the API image
+        run: >
+          docker build backend
+          --tag "$REGISTRY/conduit-api:$GITHUB_SHA"
+          --build-arg APP_REVISION="$GITHUB_SHA"
+          --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY"
+      - name: Build the frontend image
+        run: >
+          docker build frontend
+          --tag "$REGISTRY/conduit-web:$GITHUB_SHA"
+          --label org.opencontainers.image.source="https://github.com/$GITHUB_REPOSITORY"
+      - name: Deliver both images
+        run: |
+          docker push "$REGISTRY/conduit-api:$GITHUB_SHA"
+          docker push "$REGISTRY/conduit-web:$GITHUB_SHA"
+
+  deploy:
+    needs: [unit-tests, gitleaks]
+    # Paused while the server moves to containers (Lesson 7). Lesson 8 turns it back on.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
